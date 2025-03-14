@@ -28,10 +28,9 @@
     </div>
 
     <script>
-        // 图谱配置和数据
         const chart = echarts.init(document.getElementById('graph-container'));
         const defaultLevel = 2;                 // Initial default rendering of second layer data
-        // 记录节点状态的数据结构
+        // Data structure for recording node status
         const loadedNodes = new Set();          // Collection of loaded nodes
         const loadedEdges = new Set();          // The set of loaded edges
         const nodesWithChildren = new Set();    // Collection of node IDs with child nodes
