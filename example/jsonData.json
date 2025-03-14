@@ -1,0 +1,50 @@
+{
+    "1": [
+        { "id": "2", "name": "machine learning", "symbolSize": 40, "category": 1, "source": "1", "relation": "contain", "hasChildren": true },
+        { "id": "3", "name": "Deep learning", "symbolSize": 40, "category": 1, "source": "1", "relation": "contain", "hasChildren": true },
+        { "id": "4", "name": "natural language processing", "symbolSize": 40, "category": 1, "source": "1", "relation": "contain", "hasChildren": true }
+    ],
+    "2": [
+        { "id": "5", "name": "Supervised Learning", "symbolSize": 30, "category": 1, "source": "2", "relation": "classification", "hasChildren": true },
+        { "id": "6", "name": "autonomous learning", "symbolSize": 30, "category": 1, "source": "2", "relation": "classification", "hasChildren": true },
+        { "id": "7", "name": "Reinforcement Learning", "symbolSize": 30, "category": 1, "source": "2", "relation": "classification", "hasChildren": true }
+    ],
+    "3": [
+        { "id": "8", "name": "CNN", "symbolSize": 25, "category": 1, "source": "3", "relation": "model", "hasChildren": false },
+        { "id": "9", "name": "RNN", "symbolSize": 25, "category": 1, "source": "3", "relation": "model", "hasChildren": false },
+        { "id": "10", "name": "Transformer", "symbolSize": 25, "category": 1, "source": "3", "relation": "model", "hasChildren": true }
+    ],
+    "4": [
+        { "id": "11", "name": "machine translation", "symbolSize": 25, "category": 2, "source": "4", "relation": "application", "hasChildren": false },
+        { "id": "12", "name": "Sentiment analysis", "symbolSize": 25, "category": 2, "source": "4", "relation": "application", "hasChildren": false },
+        { "id": "13", "name": "text generation", "symbolSize": 25, "category": 2, "source": "4", "relation": "application", "hasChildren": true }
+    ],
+    "5": [
+        { "id": "14", "name": "decision tree", "symbolSize": 20, "category": 1, "source": "5", "relation": "algorithm", "hasChildren": false },
+        { "id": "15", "name": "Support vector machine", "symbolSize": 20, "category": 1, "source": "5", "relation": "algorithm", "hasChildren": false }
+    ],
+    "6": [
+        { "id": "16", "name": "clustering algorithm", "symbolSize": 20, "category": 1, "source": "6", "relation": "algorithm", "hasChildren": true },
+        { "id": "17", "name": "Dimensionality reduction algorithm", "symbolSize": 20, "category": 1, "source": "6", "relation": "algorithm", "hasChildren": false }
+    ],
+    "7": [
+        { "id": "18", "name": "Q-learning", "symbolSize": 20, "category": 1, "source": "7", "relation": "algorithm", "hasChildren": false },
+        { "id": "19", "name": "DQN", "symbolSize": 20, "category": 1, "source": "7", "relation": "algorithm", "hasChildren": false }
+    ],
+    "10": [
+        { "id": "20", "name": "BERT", "symbolSize": 20, "category": 1, "source": "10", "relation": "achieve", "hasChildren": false },
+        { "id": "21", "name": "GPT", "symbolSize": 20, "category": 1, "source": "10", "relation": "achieve", "hasChildren": true }
+    ],
+    "13": [
+        { "id": "22", "name": "Article creation", "symbolSize": 18, "category": 2, "source": "13", "relation": "scene", "hasChildren": false },
+        { "id": "23", "name": "Dialogue system", "symbolSize": 18, "category": 2, "source": "13", "relation": "scene", "hasChildren": false }
+    ],
+    "16": [
+        { "id": "24", "name": "K-means", "symbolSize": 15, "category": 1, "source": "16", "relation": "method", "hasChildren": false },
+        { "id": "25", "name": "DBSCAN", "symbolSize": 15, "category": 1, "source": "16", "relation": "method", "hasChildren": false }
+    ],
+    "21": [
+        { "id": "26", "name": "GPT-3", "symbolSize": 15, "category": 1, "source": "21", "relation": "version", "hasChildren": false },
+        { "id": "27", "name": "GPT-4", "symbolSize": 15, "category": 1, "source": "21", "relation": "version", "hasChildren": false }
+    ]
+}

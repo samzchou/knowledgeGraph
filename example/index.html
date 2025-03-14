@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>knowledge graph</title>
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="./echarts.min.js"></script>
+    <script src="./jquery-1.11.0.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="graph-container"></div>
+    <div class="control-panel">
+        <div class="legend-info">
+            <div class="legend-item">
+                <span style="border: 2px solid red;"></span> Expandable nodes
+            </div>
+            <div class="legend-item">
+                <span style="border: 2px solid green;"></span> Retractable nodes
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="expand-all">Expand all</button>
+            <button id="reset">Reset</button>
+        </div>
+        <div id="treeContainer"></div>
+    </div>
+
+    <script>
+        // 图谱配置和数据
+        const chart = echarts.init(document.getElementById('graph-container'));
+        const defaultLevel = 2;                 // Initial default rendering of second layer data
+        // 记录节点状态的数据结构
+        const loadedNodes = new Set();          // Collection of loaded nodes
+        const loadedEdges = new Set();          // The set of loaded edges
+        const nodesWithChildren = new Set();    // Collection of node IDs with child nodes
+        const expandedNodes = new Set();        // Expanded node collection
+        const nodeChildren = new Map();         // Record the direct child nodes of each node {nodeId: [childId1, childId2, ...]}
+
+        var mockData, graphData, fullGraphData;
+        
+        // Initialize graphic rendering
+        async function initChart() {
+            $.getJSON('./jsonData.json').then(response => {
+                mockData = response;
+            
+                // 初始节点和边数据
+                graphData = {
+                    nodes: [
+                        { id: '1', name: 'artificial intelligence', symbolSize: 50, category: 0, itemStyle: { borderColor: 'red', borderWidth: 2 } }
+                    ],
+                    links: [],
+                    categories: [
+                        { name: 'Core concepts' },
+                        { name: 'Technical branch' },
+                        { name: 'Application area ' }
+                    ]
+                };
+
+                // Complete node and edge data (all data stored in memory)
+                fullGraphData = {
+                    nodes: [...graphData.nodes],
+                    links: []
+                };
+
+                // Record nodes with child nodes
+                for (const nodes of Object.values(mockData)) {
+                    for (const node of nodes) {
+                        if (node.hasChildren) {
+                            nodesWithChildren.add(node.id);
+                        }
+                    }
+                }
+
+                // Chart configuration options
+                const option = {
+                    tooltip: {
+                        formatter: function(params) {
+                            if (params.dataType === 'node') {
+                                let status = '';
+                                if (expandedNodes.has(params.data.id)) {
+                                    status = '<br/><span style="color:green">Click to receive the screwdriver node</span>';
+                                } else if (nodesWithChildren.has(params.data.id)) {
+                                    status = '<br/><span style="color:red">Click to expand child nodes</span>';
+                                }
+                                return params.data.name + status;
+                            }
+                        }
+                    },
+                    legend: [
+                      {
+                        show: true,
+                        data: graphData.categories.map(a => {
+                          return a.name;
+                        })
+                      }
+                    ],
+                    animationDuration: 1000,
+                    animationEasingUpdate: 'quinticInOut',
+                    series: [{
+                        type: 'graph',
+                        layout: 'force',
+                        data: graphData.nodes,
+                        links: graphData.links,
+                        categories: graphData.categories,
+                        roam: true,
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: function(params) {
+                                return params.name;
+                            }
+                        },
+                        force: {
+                            repulsion: 300,
+                            edgeLength: 150,
+                            gravity: 0.1
+                        },
+                        draggable: true,
+                        legendHoverLink: true,
+                        hoverAnimation: true,
+                        edgeSymbol: ['circle', 'arrow'],
+                        edgeSymbolSize: [4,8],
+                        lineStyle: {
+                            color: '#aaa',
+                            width: 1,
+                            curveness: 0.3
+                        },
+                        edgeLabel: {
+                            show: true,
+                            formatter: function(params) {
+                                return params.data.value;
+                            },
+                            fontSize: 11,
+                            color: '#888',
+                            align: 'center',
+                            position: 'middle',
+                        },
+                        emphasis: {
+                            focus: 'adjacency',
+                            label: {
+                                show: true
+                            },
+                            lineStyle: {
+                                width: 2,
+                                color: "#409EFF"
+                            },
+                            edgeLabel: {
+                                show: true,
+                            },
+                        },
+                        zlevel: 1
+                    }]
+                };
+                
+                chart.setOption(option,true);
+                loadedNodes.add('1');
+
+                // Default Expand Hierarchical Nodes
+                initLoadByLevels();
+            })
+        }
+        
+        
+        // Simulate obtaining relevant nodes from the server
+        async function fetchRelatedNodes(nodeId) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return mockData[nodeId] || [];
+        }
+        
+        // Update the style of nodes
+        function updateNodeStyle(node) {
+            const nodeId = node.id;
+            const newNode = { ...node };
+            
+            if (expandedNodes.has(nodeId)) {
+                // Expand nodes with green borders
+                newNode.itemStyle = {
+                    borderColor: 'green',
+                    borderWidth: 2
+                };
+            } else if (nodesWithChildren.has(nodeId)) {
+                // Nodes with child nodes but not expanded are bordered in red
+                newNode.itemStyle = {
+                    borderColor: 'red',
+                    borderWidth: 2
+                };
+            } else {
+                // Nodes without child nodes have no borders
+                newNode.itemStyle = {
+                    borderColor: 'transparent',
+                    borderWidth: 0
+                };
+            }
+            
+            return newNode;
+        }
+        
+        // Recursive search for all subset nodes
+        function getAllDescendants(nodeId, descendants = new Set()) {
+            const children = nodeChildren.get(nodeId) || [];
+            
+            children.forEach(childId => {
+                descendants.add(childId);
+                getAllDescendants(childId, descendants);
+            });
+            
+            return descendants;
+        }
+        
+        // Expand nodes
+        async function expandNode(nodeId) {
+            if (expandedNodes.has(nodeId)) return;
+            
+            try {
+                const relatedNodes = await fetchRelatedNodes(nodeId);
+                if (relatedNodes.length > 0) {
+                    const childrenIds = relatedNodes.map(node => node.id);
+                    nodeChildren.set(nodeId, childrenIds);
+                    
+                    const newNodes = [];
+                    const newLinks = [];
+                    
+                    relatedNodes.forEach(node => {
+                        if (!loadedNodes.has(node.id)) {
+                            const newNode = {
+                                id: node.id,
+                                name: node.name,
+                                symbolSize: node.symbolSize,
+                                category: node.category,
+                                source: nodeId
+                            };
+                            
+                            const styledNode = updateNodeStyle(newNode);
+                            
+                            fullGraphData.nodes.push(styledNode);
+                            newNodes.push(styledNode);
+                            loadedNodes.add(node.id);
+
+                        } else {
+                            const existingNode = fullGraphData.nodes.find(n => n.id === node.id);
+                            if (existingNode) {
+                                newNodes.push(existingNode);
+                            }
+                        }
+                        
+                        const linkId = `${node.source}-${node.id}`;
+                        if (!loadedEdges.has(linkId)) {
+                            const newLink = {
+                                source: node.source,
+                                target: node.id,
+                                name: node.relation,
+                                value: node.relation
+                            };
+                            
+                            fullGraphData.links.push(newLink);
+                            newLinks.push(newLink);
+                            loadedEdges.add(linkId);
+                        } else {
+                            const existingLink = fullGraphData.links.find(l => 
+                                l.source === node.source && l.target === node.id);
+                            if (existingLink) {
+                                newLinks.push(existingLink);
+                            }
+                        }
+                    });
+                    
+                    graphData.nodes = graphData.nodes.concat(newNodes);
+                    graphData.links = graphData.links.concat(newLinks);
+                    
+                    expandedNodes.add(nodeId);
+                    
+                    const currentNodeIndex = graphData.nodes.findIndex(n => n.id === nodeId);
+                    if (currentNodeIndex !== -1) {
+                        graphData.nodes[currentNodeIndex] = updateNodeStyle(graphData.nodes[currentNodeIndex]);
+                    }
+
+                    updateChartView();
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        function collapseNode(nodeId) {
+            if (!expandedNodes.has(nodeId)) return;
+            
+            const descendants = getAllDescendants(nodeId);
+            
+            graphData.nodes = graphData.nodes.filter(node => !descendants.has(node.id));
+            graphData.links = graphData.links.filter(link =>  !(descendants.has(link.target) || descendants.has(link.source)));
+            
+            expandedNodes.delete(nodeId);
+            
+            const currentNodeIndex = graphData.nodes.findIndex(n => n.id === nodeId);
+            if (currentNodeIndex !== -1) {
+                graphData.nodes[currentNodeIndex] = updateNodeStyle(graphData.nodes[currentNodeIndex]);
+            }
+            
+            updateChartView();
+        }
+        
+        function updateChartView() {
+            chart.setOption({
+                series: [{
+                    data: graphData.nodes,
+                    links: graphData.links
+                }]
+            });
+        }
+        
+        chart.on('click', async (params) => {
+            if (params.dataType === 'node') {
+                const nodeId = params.data.id;
+                chart.showLoading();
+                try {
+                    if (expandedNodes.has(nodeId)) {
+                        collapseNode(nodeId);
+                    } else if (nodesWithChildren.has(nodeId)) {
+                        await expandNode(nodeId);
+                    }
+                } finally {
+                    chart.hideLoading();
+                    displayTree(params.data);
+                }
+            }
+        });
+
+        function displayTree(node) {
+            const treeHtml = buildTree(node.id);
+            document.getElementById("treeContainer").innerHTML = `<h3>${node.name}</h3>` + ( treeHtml || "");
+        }
+
+        function buildTree(id, level = 0) {
+            const children = mockData[id];
+            if (!children || children.length === 0) return '';
+
+            let html = `<ul>`;
+            children.forEach(child => {
+                html += `<li>${child.name} (ID: ${child.id})`;
+                html += buildTree(child.id, level + 1);
+                html += "</li>";
+            });
+            html += "</ul>";
+            return html;
+        }
+        
+        async function initLoadByLevels() {
+            chart.showLoading();
+            try {
+                const ids = Object.keys(mockData).slice(0, defaultLevel);
+                for (let id of ids) {
+                    await expandNode(id);
+
+                    const firstLevelNodes = nodeChildren.get(id) || [];
+                    for (const nodeId of firstLevelNodes) {
+                        if (nodesWithChildren.has(nodeId)) {
+                            await expandNode(nodeId);
+                        }
+                    }
+                }
+                
+                chart.setOption({
+                    series: [{
+                        force: {
+                            layoutAnimation: true
+                        }
+                    }]
+                });
+            } finally {
+                chart.hideLoading();
+            }
+        }
+        
+        document.getElementById('expand-all').addEventListener('click', async function() {
+            chart.showLoading();
+            try {
+                const nodesToExpand = [...nodesWithChildren].filter(id => !expandedNodes.has(id));
+                for (const nodeId of nodesToExpand) {
+                    await expandNode(nodeId);
+                }
+            } finally {
+                chart.hideLoading();
+            }
+        });
+                
+        document.getElementById('reset').addEventListener('click', () => {
+            chart.showLoading();
+            try {
+                graphData.nodes = [fullGraphData.nodes.find(n => n.id === '1')];
+                graphData.links = [];
+                
+                expandedNodes.clear();
+                
+                initLoadByLevels();
+            } finally {
+                chart.hideLoading();
+            }
+        });
+
+
+        window.onload = () => {
+            // If it is a nested window, it can communicate with the parent window
+            if (window.self !== window.top) {
+                window.addEventListener('message', event => {
+                    // do something
+                })
+            }
+
+            initChart();
+        };
+        
+        window.addEventListener('resize', () => {
+            chart.resize();
+        });
+    </script>
+</body>
+</html>
